@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  EDITOR
+  REVIEWER
+  AUTHOR
+}
+
+enum PaperStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  REVISION_REQUIRED
+  ACCEPTED
+  REJECTED
+  PUBLISHED
+}
+
+enum Language {
+  ENGLISH
+  HINDI
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          UserRole  @default(AUTHOR)
+  phone         String?
+  affiliation   String?
+  designation   String?
+  bio           String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  papers        Paper[]
+  reviews       Review[]
+  
+  @@map("users")
+}
+
+model EditorialMember {
+  id            String    @id @default(cuid())
+  name          String
+  designation   String
+  affiliation   String
+  email         String?
+  phone         String?
+  profileUrl    String?
+  category      String    // Editor-in-Chief, Co-Editor, Editorial Board, Advisory Board
+  order         Int       @default(0)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@map("editorial_members")
+}
+
+model Paper {
+  id                String       @id @default(cuid())
+  title             String
+  abstract          String       @db.Text
+  keywords          String[]
+  language          Language     @default(ENGLISH)
+  submissionArea    String       // Arts & Humanities, Social Sciences, etc.
+  manuscriptFile    String       // File path/URL
+  status            PaperStatus  @default(SUBMITTED)
+  submittedAt       DateTime     @default(now())
+  reviewedAt        DateTime?
+  publishedAt       DateTime?
+  volumeNumber      Int?
+  issueNumber       Int?
+  pageNumbers       String?
+  doi               String?      @unique
+  
+  authorId          String
+  author            User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  coAuthors         CoAuthor[]
+  reviews           Review[]
+  
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  
+  @@map("papers")
+}
+
+model CoAuthor {
+  id            String    @id @default(cuid())
+  name          String
+  email         String
+  affiliation   String?
+  
+  paperId       String
+  paper         Paper     @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime  @default(now())
+  
+  @@map("co_authors")
+}
+
+model Review {
+  id            String    @id @default(cuid())
+  comments      String    @db.Text
+  recommendation String   // Accept, Reject, Revision Required
+  reviewedAt    DateTime  @default(now())
+  
+  paperId       String
+  paper         Paper     @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  
+  reviewerId    String
+  reviewer      User      @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+  
+  @@map("reviews")
+}
+
+model JournalIssue {
+  id            String    @id @default(cuid())
+  volumeNumber  Int
+  issueNumber   Int
+  title         String?
+  description   String?   @db.Text
+  publishedDate DateTime
+  coverImage    String?
+  isPublished   Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@unique([volumeNumber, issueNumber])
+  @@map("journal_issues")
+}
+
+model BasicInfo {
+  id            String    @id @default(cuid())
+  section       String    @unique // vision, mission, objective, scope, about
+  title         String
+  content       String    @db.Text
+  updatedAt     DateTime  @updatedAt
+  
+  @@map("basic_info")
+}
+
+model Policy {
+  id            String    @id @default(cuid())
+  section       String    @unique // publication_ethics, peer_review, plagiarism
+  title         String
+  content       String    @db.Text
+  updatedAt     DateTime  @updatedAt
+  
+  @@map("policies")
+}
+
+model SubmissionGuideline {
+  id            String    @id @default(cuid())
+  section       String    @unique // call_for_papers, areas, important_info
+  title         String
+  content       String    @db.Text
+  updatedAt     DateTime  @updatedAt
+  
+  @@map("submission_guidelines")
+}
+
+model ImportantDate {
+  id            String    @id @default(cuid())
+  label         String
+  date          DateTime
+  description   String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@map("important_dates")
+}
